@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Where Am I?</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='m.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #74ebd5, #9face6);
+            color: #333;
+        }
+
+        #location-info {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transition: transform 0.3s ease;
+        }
+
+        #location-info:hover {
+            transform: scale(1.02);
+        }
+
+        h1 {
+            color: #4b6cb7;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin: 8px 0;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #4b6cb7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #3a4f9b;
+        }
+
+        #map {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+            border-radius: 10px;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #status {
+            font-style: italic;
+            color: #ff5722;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="location-info">
+        <h1>Where Am I?</h1>
+        <p>Click the button to find your current location.</p>
+        <button id="getLocationBtn">Get My Location</button>
+        <p id="status"></p>
+        <p><strong>Latitude:</strong> <span id="latitude">N/A</span></p>
+        <p><strong>Longitude:</strong> <span id="longitude">N/A</span></p>
+        <p><strong>Accuracy:</strong> <span id="accuracy">N/A</span> meters</p>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const statusDiv = document.getElementById('status');
+        const latitudeSpan = document.getElementById('latitude');
+        const longitudeSpan = document.getElementById('longitude');
+        const accuracySpan = document.getElementById('accuracy');
+        const mapDiv = document.getElementById('map');
+        let map, marker;
+
+        getLocationBtn.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                statusDiv.textContent = 'Locating...';
+                getLocationBtn.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const acc = position.coords.accuracy;
+
+                        statusDiv.textContent = 'Location found!';
+                        latitudeSpan.textContent = lat.toFixed(6);
+                        longitudeSpan.textContent = lon.toFixed(6);
+                        accuracySpan.textContent = acc.toFixed(2);
+                        getLocationBtn.disabled = false;
+
+                        mapDiv.style.display = 'block';
+                        if (!map) {
+                            map = L.map('map').setView([lat, lon], 13);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; OpenStreetMap contributors'
+                            }).addTo(map);
+                            marker = L.marker([lat, lon]).addTo(map)
+                                .bindPopup('You are here!').openPopup();
+                        } else {
+                            map.setView([lat, lon], 13);
+                            marker.setLatLng([lat, lon]).bindPopup('You are here!').openPopup();
+                        }
+                    },
+                    (error) => {
+                        getLocationBtn.disabled = false;
+                        let errorMessage = 'Error getting location: ';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += 'User denied the request for Geolocation.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += 'Location information is unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += 'The request to get user location timed out.';
+                                break;
+                            default:
+                                errorMessage += 'An unknown error occurred.';
+                        }
+                        statusDiv.textContent = errorMessage;
+                        console.error('Geolocation error:', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                statusDiv.textContent = 'Geolocation is not supported by your browser.';
+            }
+        });
+    </script>
+</body>
+</html>
